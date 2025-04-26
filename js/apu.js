@@ -5,6 +5,10 @@
 
 export class APU {
   constructor(gameboy) {
+    if (!gameboy) {
+      throw new Error('APU: Gameboy instance is required');
+    }
+    
     this.gameboy = gameboy;
     this.mmu = gameboy.mmu;
     
@@ -63,6 +67,11 @@ export class APU {
     
     try {
       this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (!this.audioCtx) {
+        console.warn('Web Audio API not supported in this browser');
+        return;
+      }
+      
       this.masterGain = this.audioCtx.createGain();
       this.masterGain.gain.value = 0.1; // Master volume
       this.masterGain.connect(this.audioCtx.destination);
@@ -75,7 +84,8 @@ export class APU {
       
       console.log('Audio initialized');
     } catch (e) {
-      console.error('Web Audio API not supported:', e);
+      console.error('Web Audio API initialization error:', e);
+      this.audioCtx = null;
     }
   }
   
@@ -83,117 +93,151 @@ export class APU {
   initChannel1() {
     if (!this.audioCtx) return;
     
-    this.channel1 = this.audioCtx.createOscillator();
-    this.channel1.type = 'square';
-    
-    const gainNode = this.audioCtx.createGain();
-    gainNode.gain.value = 0;
-    
-    this.channel1.connect(gainNode);
-    gainNode.connect(this.masterGain);
-    
-    this.channel1.gainNode = gainNode;
-    this.channel1.started = false;
+    try {
+      this.channel1 = this.audioCtx.createOscillator();
+      this.channel1.type = 'square';
+      
+      const gainNode = this.audioCtx.createGain();
+      gainNode.gain.value = 0;
+      
+      this.channel1.connect(gainNode);
+      gainNode.connect(this.masterGain);
+      
+      this.channel1.gainNode = gainNode;
+      this.channel1.started = false;
+    } catch (e) {
+      console.error('Error initializing channel 1:', e);
+      this.channel1 = null;
+    }
   }
   
   // Initialize pulse wave channel 2
   initChannel2() {
     if (!this.audioCtx) return;
     
-    this.channel2 = this.audioCtx.createOscillator();
-    this.channel2.type = 'square';
-    
-    const gainNode = this.audioCtx.createGain();
-    gainNode.gain.value = 0;
-    
-    this.channel2.connect(gainNode);
-    gainNode.connect(this.masterGain);
-    
-    this.channel2.gainNode = gainNode;
-    this.channel2.started = false;
+    try {
+      this.channel2 = this.audioCtx.createOscillator();
+      this.channel2.type = 'square';
+      
+      const gainNode = this.audioCtx.createGain();
+      gainNode.gain.value = 0;
+      
+      this.channel2.connect(gainNode);
+      gainNode.connect(this.masterGain);
+      
+      this.channel2.gainNode = gainNode;
+      this.channel2.started = false;
+    } catch (e) {
+      console.error('Error initializing channel 2:', e);
+      this.channel2 = null;
+    }
   }
   
   // Initialize wave channel 3
   initChannel3() {
     if (!this.audioCtx) return;
     
-    // We use a simple sine wave for now
-    // A more accurate implementation would use a custom waveform based on wave pattern RAM
-    this.channel3 = this.audioCtx.createOscillator();
-    this.channel3.type = 'sine';
-    
-    const gainNode = this.audioCtx.createGain();
-    gainNode.gain.value = 0;
-    
-    this.channel3.connect(gainNode);
-    gainNode.connect(this.masterGain);
-    
-    this.channel3.gainNode = gainNode;
-    this.channel3.started = false;
+    try {
+      // We use a simple sine wave for now
+      // A more accurate implementation would use a custom waveform based on wave pattern RAM
+      this.channel3 = this.audioCtx.createOscillator();
+      this.channel3.type = 'sine';
+      
+      const gainNode = this.audioCtx.createGain();
+      gainNode.gain.value = 0;
+      
+      this.channel3.connect(gainNode);
+      gainNode.connect(this.masterGain);
+      
+      this.channel3.gainNode = gainNode;
+      this.channel3.started = false;
+    } catch (e) {
+      console.error('Error initializing channel 3:', e);
+      this.channel3 = null;
+    }
   }
   
   // Initialize noise channel 4
   initChannel4() {
     if (!this.audioCtx) return;
     
-    // Web Audio doesn't have a built-in noise generator
-    // For simplicity, we'll use an approximate white noise generator
-    const bufferSize = 2 * this.audioCtx.sampleRate;
-    const noiseBuffer = this.audioCtx.createBuffer(1, bufferSize, this.audioCtx.sampleRate);
-    const output = noiseBuffer.getChannelData(0);
-    
-    for (let i = 0; i < bufferSize; i++) {
-      output[i] = Math.random() * 2 - 1;
+    try {
+      // Web Audio doesn't have a built-in noise generator
+      // For simplicity, we'll use an approximate white noise generator
+      const bufferSize = 2 * this.audioCtx.sampleRate;
+      const noiseBuffer = this.audioCtx.createBuffer(1, bufferSize, this.audioCtx.sampleRate);
+      const output = noiseBuffer.getChannelData(0);
+      
+      for (let i = 0; i < bufferSize; i++) {
+        output[i] = Math.random() * 2 - 1;
+      }
+      
+      this.channel4 = this.audioCtx.createBufferSource();
+      this.channel4.buffer = noiseBuffer;
+      this.channel4.loop = true;
+      
+      const gainNode = this.audioCtx.createGain();
+      gainNode.gain.value = 0;
+      
+      this.channel4.connect(gainNode);
+      gainNode.connect(this.masterGain);
+      
+      this.channel4.gainNode = gainNode;
+      this.channel4.started = false;
+    } catch (e) {
+      console.error('Error initializing channel 4:', e);
+      this.channel4 = null;
     }
-    
-    this.channel4 = this.audioCtx.createBufferSource();
-    this.channel4.buffer = noiseBuffer;
-    this.channel4.loop = true;
-    
-    const gainNode = this.audioCtx.createGain();
-    gainNode.gain.value = 0;
-    
-    this.channel4.connect(gainNode);
-    gainNode.connect(this.masterGain);
-    
-    this.channel4.gainNode = gainNode;
-    this.channel4.started = false;
   }
   
   // Start audio processing
   start() {
     this.initAudio();
     
-    if (this.audioCtx && this.audioCtx.state === 'suspended') {
-      this.audioCtx.resume();
+    if (!this.audioCtx) return;
+    
+    if (this.audioCtx.state === 'suspended') {
+      this.audioCtx.resume().catch(err => {
+        console.error('Error resuming audio context:', err);
+      });
     }
     
     // Start oscillators if they're not already running
-    if (this.channel1 && !this.channel1.started) {
-      this.channel1.start();
-      this.channel1.started = true;
-    }
-    
-    if (this.channel2 && !this.channel2.started) {
-      this.channel2.start();
-      this.channel2.started = true;
-    }
-    
-    if (this.channel3 && !this.channel3.started) {
-      this.channel3.start();
-      this.channel3.started = true;
-    }
-    
-    if (this.channel4 && !this.channel4.started) {
-      this.channel4.start();
-      this.channel4.started = true;
+    this.startChannels();
+  }
+  
+  startChannels() {
+    try {
+      if (this.channel1 && !this.channel1.started) {
+        this.channel1.start();
+        this.channel1.started = true;
+      }
+      
+      if (this.channel2 && !this.channel2.started) {
+        this.channel2.start();
+        this.channel2.started = true;
+      }
+      
+      if (this.channel3 && !this.channel3.started) {
+        this.channel3.start();
+        this.channel3.started = true;
+      }
+      
+      if (this.channel4 && !this.channel4.started) {
+        this.channel4.start();
+        this.channel4.started = true;
+      }
+    } catch (e) {
+      console.error('Error starting audio channels:', e);
     }
   }
   
   // Pause audio
   pause() {
     if (this.audioCtx && this.audioCtx.state === 'running') {
-      this.audioCtx.suspend();
+      this.audioCtx.suspend().catch(err => {
+        console.error('Error suspending audio context:', err);
+      });
     }
   }
   
@@ -201,49 +245,55 @@ export class APU {
   stopAudio() {
     if (!this.audioCtx) return;
     
-    // Stop and disconnect channels
-    if (this.channel1) {
-      try {
-        this.channel1.stop();
-        this.channel1.disconnect();
-      } catch (e) {}
-      this.channel1 = null;
-    }
-    
-    if (this.channel2) {
-      try {
-        this.channel2.stop();
-        this.channel2.disconnect();
-      } catch (e) {}
-      this.channel2 = null;
-    }
-    
-    if (this.channel3) {
-      try {
-        this.channel3.stop();
-        this.channel3.disconnect();
-      } catch (e) {}
-      this.channel3 = null;
-    }
-    
-    if (this.channel4) {
-      try {
-        this.channel4.stop();
-        this.channel4.disconnect();
-      } catch (e) {}
-      this.channel4 = null;
-    }
-    
-    // Disconnect master gain
-    if (this.masterGain) {
-      this.masterGain.disconnect();
-      this.masterGain = null;
-    }
-    
-    // Close audio context
-    if (this.audioCtx) {
-      this.audioCtx.close();
-      this.audioCtx = null;
+    try {
+      // Stop and disconnect channels
+      if (this.channel1) {
+        try {
+          this.channel1.stop();
+          this.channel1.disconnect();
+        } catch (e) {}
+        this.channel1 = null;
+      }
+      
+      if (this.channel2) {
+        try {
+          this.channel2.stop();
+          this.channel2.disconnect();
+        } catch (e) {}
+        this.channel2 = null;
+      }
+      
+      if (this.channel3) {
+        try {
+          this.channel3.stop();
+          this.channel3.disconnect();
+        } catch (e) {}
+        this.channel3 = null;
+      }
+      
+      if (this.channel4) {
+        try {
+          this.channel4.stop();
+          this.channel4.disconnect();
+        } catch (e) {}
+        this.channel4 = null;
+      }
+      
+      // Disconnect master gain
+      if (this.masterGain) {
+        this.masterGain.disconnect();
+        this.masterGain = null;
+      }
+      
+      // Close audio context
+      if (this.audioCtx) {
+        this.audioCtx.close().catch(err => {
+          console.error('Error closing audio context:', err);
+        });
+        this.audioCtx = null;
+      }
+    } catch (error) {
+      console.error('Error stopping audio:', error);
     }
   }
   
@@ -741,7 +791,10 @@ export class APU {
   
   // Process audio data from Web Worker
   processAudioFromWorker(audioData) {
-    // Implement if using Web Worker for audio generation
+    // Implementation will depend on how audio data is structured
+    if (!audioData) return;
+    
+    // Basic implementation - to be expanded based on audio data format
+    console.log('Received audio data from worker');
   }
 }
-
